@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,23 +10,40 @@ import (
 	"github.com/lucxjo/diru-revolt/cfg"
 )
 
+var dev bool
+
+func initFlags() {
+	flag.BoolVar(&dev, "d", false, "Run in development mode")
+
+	flag.Parse()
+}
+
 func main() {
 
-	config := cfg.GetConfig()
+	initFlags()
+	var config cfg.DiruConfig
+
+	if dev {
+		config = cfg.GetConfig("_diru")
+	} else {
+		config = cfg.GetConfig("diru")
+	}
 
     // Init a new client.
     client := revoltgo.Client{
-        Token: config.RevoltToken,
+        Token: config.Revolt.Token,
     }
 
     // Listen a on message event.
     client.OnMessage(func(m *revoltgo.Message) {
-        if m.Content == "!ping" {
-            sendMsg := &revoltgo.SendMessage{}
-            sendMsg.SetContent("🏓 Pong!")
-
-            m.Reply(true, sendMsg)
-        }
+		if m.AuthorId == config.Revolt.Uid {
+			return
+		}
+		if m.Content == "!ping" {
+			sendMsg := &revoltgo.SendMessage{}
+			sendMsg.SetContent("!pong")
+			m.Reply(true, sendMsg)
+		}
     })
 
     // Start the client.
